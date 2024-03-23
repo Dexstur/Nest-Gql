@@ -1,0 +1,5 @@
+#import "../auth/auth.graphql"
+
+type Query {
+  getAllUsers: [User]!
+}

@@ -1,0 +1,150 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  LEAD
+  USER
+}
+
+enum QuestionType {
+  TEXT
+  MULTICHOICE
+  BOOLEAN
+}
+
+enum Status {
+  PENDING
+  COMPLETED
+  INPROGRESS
+}
+
+model User {
+  id           String       @id @default(auto()) @map("_id") @db.ObjectId
+  email        String       @unique
+  slackId      String       @unique
+  name         String
+  password     String
+  role         Role         @default(USER)
+  active       Boolean      @default(true)
+  confirmed    Boolean      @default(false)
+  departmentId String       @db.ObjectId
+  department   Department   @relation("members", fields: [departmentId], references: [id])
+  leads        Department?  @relation("leads")
+  manageIds    String[]     @db.ObjectId
+  manages      Department[] @relation("managers", fields: [manageIds], references: [id])
+  taskIds      String[]     @db.ObjectId
+  tasks        Task[]       @relation("assignees", fields: [taskIds], references: [id])
+  code         String       @default("none")
+
+  responses Response[]
+
+  reports Report[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Department {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String   @unique
+  description String?
+  leadId      String?  @unique @db.ObjectId
+  lead        User?    @relation("leads", fields: [leadId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  // memberIds   String[] @db.ObjectId
+  // members     User[]   @relation("members", fields: [memberIds], references: [id])
+  members     User[]   @relation("members")
+  managerIds  String[] @db.ObjectId
+  managers    User[]   @relation("managers", fields: [managerIds], references: [id])
+  tasks       Task[]   @relation("tasks")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("departments")
+}
+
+model Task {
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String
+  active      Boolean @default(true)
+  frequency   String
+  deadline    String
+
+  departmentId String     @db.ObjectId
+  department   Department @relation("tasks", fields: [departmentId], references: [id])
+
+  assigneeIds String[] @db.ObjectId
+  assignees   User[]   @relation("assignees", fields: [assigneeIds], references: [id])
+
+  questions Question[]
+  reports   Report[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("tasks")
+}
+
+model Question {
+  id       String       @id @default(auto()) @map("_id") @db.ObjectId
+  text     String
+  type     QuestionType
+  options  String[]
+  required Boolean
+  taskId   String       @db.ObjectId
+  task     Task         @relation(fields: [taskId], references: [id])
+
+  responses Response[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("questions")
+}
+
+model Response {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  answers    String[]
+  questionId String   @db.ObjectId
+  question   Question @relation(fields: [questionId], references: [id])
+  userId     String   @db.ObjectId
+  user       User     @relation(fields: [userId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("responses")
+}
+
+model Report {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  taskId String @db.ObjectId
+  task   Task   @relation(fields: [taskId], references: [id])
+
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id])
+
+  status Status @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("reports")
+}

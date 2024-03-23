@@ -1,0 +1,23 @@
+#import "../auth/auth.graphql"
+
+type Department {
+  id: ID!
+  name: String!
+  description: String
+  leadId: ID
+  memberIds: [ID]!
+  lead: User
+  members: [User]!
+  managerIds: [ID]!
+  managers: [User]!
+}
+
+input CreateDept {
+  name: String!
+  description: String
+  leadId: ID
+}
+
+type Mutation {
+  create(input: CreateDept!): Department!
+}
